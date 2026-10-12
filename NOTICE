@@ -20,7 +20,7 @@ Changes from upstream:
 - Prebuilt example HTML pages, evals/, .github/ and repository meta files
   were left out to keep the plugin small; every example rebuilds with
   `node examples/<name>/build.mjs`.
-- Added README.md, NOTICE, assets/logo.svg and screenshots.
+- Added README.md, CREDITS.md, NOTICE, assets/logo.svg and screenshots.
 
 This is an independent packaging and is not an official release by the
 original author. assets/dial-indicator.webp is from the upstream repository.

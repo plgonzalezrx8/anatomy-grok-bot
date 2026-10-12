@@ -4,6 +4,17 @@ Interactive isometric technical figures for **Cursor** and **Grok Bot**, package
 
 ![A rotary engine figure built with the kit](assets/screenshot-rotary-engine.png)
 
+## Credits
+
+**Anatomy was created by Ryan ([@wheresryan22](https://x.com/wheresryan22)).** All of the figure-drawing design, the kit, the references and the examples in this plugin are his work.
+
+- Original repository: <https://github.com/wheresryan22/anatomy>
+- Live demo: <https://skills.wheresryan.sh/anatomy>
+- Author on X: <https://x.com/wheresryan22>
+- License: MIT (original copyright notice kept intact in [LICENSE](LICENSE))
+
+This repository is an **unofficial packaging** of Anatomy for Cursor and Grok Bot by Pedro Gonzalez / Blueforce Innovations. It is not an official release by the original author. See [CREDITS.md](CREDITS.md) and [NOTICE](NOTICE) for details.
+
 ## What it does
 
 Ask the agent for an explainer figure, a "how it works" diagram, or an isometric illustration and the `anatomy` skill builds it as a real, finely detailed physical object: solids with four-tone shading, correct painter's order, a framed card with title, hint and live readout, and calm eased motion. Output is a standalone HTML page (dark and light themes) or a lone SVG, framework-free or for React/Next.js, with optional WebGL shaders and an optional 3D mode.
@@ -53,4 +64,4 @@ node examples/arcade-cabinet/build.mjs --audit   # ends "audit passed"
 
 ## Credit and license
 
-Anatomy is by Ryan ([@wheresryan22](https://github.com/wheresryan22)), MIT License. Original repository and demo: <https://github.com/wheresryan22/anatomy>. This plugin is an independent packaging by Pedro Gonzalez / Blueforce Innovations and is not an official release by the original author. See [LICENSE](LICENSE) (original copyright notice kept intact) and [NOTICE](NOTICE) for exactly what changed.
+Anatomy is by Ryan ([@wheresryan22](https://x.com/wheresryan22), [GitHub](https://github.com/wheresryan22)), released under the MIT License. Original repository: <https://github.com/wheresryan22/anatomy>. Demo: <https://skills.wheresryan.sh/anatomy>. This plugin is an unofficial, independent packaging by Pedro Gonzalez / Blueforce Innovations and is not an official release by the original author. See [CREDITS.md](CREDITS.md), [LICENSE](LICENSE) (original copyright notice kept intact) and [NOTICE](NOTICE) for exactly what changed.
