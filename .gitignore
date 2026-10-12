@@ -1,2 +1,3 @@
 # Example pages are built locally, not bundled
 skills/anatomy/examples/*/*.html
+skills/anatomy/examples/*/shots/
