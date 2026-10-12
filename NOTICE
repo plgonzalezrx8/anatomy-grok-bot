@@ -1,0 +1,27 @@
+anatomy-grok-bot
+================
+
+This plugin packages "Anatomy", an open-source agent skill and kit for
+isometric technical figures.
+
+Original work:  Anatomy, by Ryan (@wheresryan22)
+Source:         https://github.com/wheresryan22/anatomy
+Upstream commit: dbf697a527bbf7d358668e1557cb1e35ff725d46 (2026-10-10)
+License:        MIT (see LICENSE; the original copyright notice is kept intact)
+
+Packaged by:    Pedro Gonzalez / Blueforce Innovations
+
+Changes from upstream:
+- Laid out as a Cursor plugin: .cursor-plugin/plugin.json, skills/anatomy/.
+- skills/anatomy/SKILL.md is the upstream SKILL.md with one added section,
+  "Running this skill from the plugin" (path resolution, requirements,
+  sanity check, and field-tested gotchas).
+- kit/, scripts/, references/ and examples/ sources are copied unchanged.
+- Prebuilt example HTML pages, evals/, .github/ and repository meta files
+  were left out to keep the plugin small; every example rebuilds with
+  `node examples/<name>/build.mjs`.
+- Added README.md, NOTICE, assets/logo.svg and screenshots.
+
+This is an independent packaging and is not an official release by the
+original author. assets/dial-indicator.webp is from the upstream repository.
+assets/screenshot-rotary-engine.png is a figure made with the kit by the packager.

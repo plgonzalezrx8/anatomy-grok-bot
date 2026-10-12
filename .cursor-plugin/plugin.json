@@ -1,0 +1,25 @@
+{
+  "name": "anatomy-grok-bot",
+  "displayName": "Anatomy for Grok Bot",
+  "version": "0.1.0",
+  "description": "Interactive isometric technical figures (standalone HTML/SVG, optional WebGL and 3D) that explain an idea as a finely detailed physical machine. Packages the open-source Anatomy skill and kit by @wheresryan22 for Cursor and Grok Bot.",
+  "author": {
+    "name": "Pedro Gonzalez / Blueforce Innovations",
+    "email": "pedrogonzalez@blueforceinnovations.com"
+  },
+  "homepage": "https://github.com/wheresryan22/anatomy",
+  "repository": "https://github.com/plgonzalezrx8/anatomy-grok-bot",
+  "license": "MIT",
+  "keywords": [
+    "anatomy",
+    "isometric",
+    "svg",
+    "diagram",
+    "illustration",
+    "explainer",
+    "webgl",
+    "figures",
+    "skills"
+  ],
+  "logo": "assets/logo.svg"
+}
