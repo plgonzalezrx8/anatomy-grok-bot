@@ -1,41 +1,201 @@
 {
-  "about": "Baselines for gate.mjs. Rules are quoted from Ryan's SKILL.md and references (upstream wheresryan22/anatomy dbf697a). Measured values come from `node scripts/gate.mjs --examples` on the light pages, 1440x1300 viewport, device scale 1, after load (2026-10-11). test-rig and spot-plate are React/Next sources; they were measured from a static react-dom/server render of figure.tsx with the kit CSS, so their live layers are absent.",
+  "about": "Baselines for gate.mjs. Rules are quoted from Ryan's SKILL.md and references (upstream wheresryan22/anatomy dbf697a). Measured values come from `node scripts/gate.mjs --examples` on the light pages, 1440x1300 viewport, device scale 1, after load (2026-10-11; span, minor, subject, accent, local added 2026-10-12). test-rig and spot-plate are React/Next sources; they were measured from a static react-dom/server render of figure.tsx with the kit CSS, so their live layers are absent.",
   "thresholds": {
-    "partsMin": { "figure": 40, "hero": 80, "epic": 151 },
+    "partsMin": {
+      "figure": 40,
+      "hero": 80,
+      "epic": 151
+    },
     "partsMinSource": "SKILL.md workflow step 1 (Figure 40-80 parts, Hero 80-150) and step 4 ('Write at least 40 parts (40-80 for a Figure, 80-150 for a Hero, more for an Epic)'). Epic: 'more' than a Hero's top, so 151.",
-    "solidsFloor": { "figure": 38, "hero": 80, "epic": 151 },
+    "solidsFloor": {
+      "figure": 38,
+      "hero": 80,
+      "epic": 151
+    },
     "solidsFloorSource": "Drawn solids (path.iso-fill, one per kit solid) are the measurable part of the parts list; screws, ticks and grooves are parts but not solids. Floor = min(tier part minimum, the smallest bundled example of that tier): Figure min(40, dial-indicator 38) = 38; Hero min(80, turning-dial 87) = 80; Epic has no example, 151. verify.md's checklist says '30-60 solids for an inline figure'; 38 is stricter because every bundled Figure reaches it.",
-    "cardFill": [0.46, 0.77],
-    "cardFillSource": "Bounding box of all non-paper pixels (halo included) over the drawing area. craft.md section 6 and the verify.md checklist: 'The object fills about 55-65% of the card'. Measured on the examples: 0.49-0.74 (box includes the halo, so it reads a little high); threshold = that range widened by 0.03 each side.",
     "inkMin": 0.2,
     "inkMinSource": "Share of non-paper pixels inside that box. Examples 0.23-0.50; floor = lowest example minus 0.03. Catches a drawing whose box is mostly air.",
     "cellMin": 0.2,
     "cellMinSource": "The drawing's box split 4x4; for each cell at least 30% covered, edge-pixel density relative to the median cell. Examples' lowest cell 0.22-0.59; floor = lowest example minus 0.02. Catches a bare region: a big face or plate with nothing on it ('a bare face or an empty corner is unfinished work', SKILL.md).",
     "paperDelta": 4,
-    "edgeDelta": 14
+    "edgeDelta": 14,
+    "accentRing": 8,
+    "accentStep": 40,
+    "accentDefault": ".iso-solid[data-lit], .iso-line[data-tone=\"lit\"]",
+    "span": [
+      0.7,
+      0.99
+    ],
+    "minorMin": 0.61,
+    "subjectMin": 0.21,
+    "accentMin": 0.24,
+    "localMin": 0.8,
+    "localMaxArea": 0.35,
+    "localPad": 6,
+    "spanSource": "Replaces the area fill as the FAIL (area fill could be moved by padding the card's height). Drawing box over the card on its longer axis. Examples 0.73-0.96; threshold widened 0.03 each side.",
+    "minorMinSource": "Drawing box over the card on its shorter axis: an empty band means the card is padded. Examples 0.64-0.82; floor = lowest minus 0.03.",
+    "subjectMinSource": "Box of the declared subject over the card area. Examples (subject = every solid except those whose box exceeds 1/4 of the drawing's box, i.e. the base) 0.24-0.61; floor = lowest minus 0.03.",
+    "accentSource": "Accent pixels found by painting the accent selector magenta in a second shot; share of them whose luminance is >= accentStep from the median of the drawn pixels in an accentRing-px ring around them. Examples' lit parts (.iso-solid[data-lit], lit lines) 0.29-0.86 (none in desk-computer, test-rig, raptor-engine); floor = lowest minus 0.05. A kit lit style on light-toned pins measures 0.13 (v2 lock with its ink marker removed).",
+    "localSource": "Pixels that differ between a state and the rest pose (minus pixels that change between two rest stills: idle animation), share inside the box of the state's declared changes padded localPad px. Examples with declared states (arcade-cabinet stick, ripple-tank frequency, turning-dial turn) 1.00; floor 0.8 leaves room for shadows and halos past a part's box. localMaxArea stops a figure declaring the whole card."
   },
   "measured": {
-    "range": { "fill": [0.49, 0.74], "ink": [0.23, 0.5], "cellMin": [0.22, 0.59] },
+    "range": {
+      "fill": [
+        0.49,
+        0.74
+      ],
+      "ink": [
+        0.23,
+        0.5
+      ],
+      "cellMin": [
+        0.22,
+        0.59
+      ],
+      "span": [
+        0.73,
+        0.96
+      ],
+      "subject": [
+        0.24,
+        0.61
+      ],
+      "accent": [
+        0.29,
+        0.86
+      ],
+      "minor": [
+        0.64,
+        0.82
+      ]
+    },
     "table": {
-      "dial-indicator": { "solids": 38, "fill": 0.56, "ink": 0.23, "cellMin": 0.57 },
-      "desk-computer": { "solids": 82, "fill": 0.59, "ink": 0.43, "cellMin": 0.23 },
-      "test-rig": { "solids": 53, "fill": 0.61, "ink": 0.33, "cellMin": 0.36 },
-      "spot-plate": { "solids": 45, "fill": 0.49, "ink": 0.35, "cellMin": 0.59 },
-      "arcade-cabinet": { "solids": 251, "fill": 0.74, "ink": 0.5, "cellMin": 0.53 },
-      "raptor-engine": { "solids": 298, "fill": 0.62, "ink": 0.39, "cellMin": 0.46 },
-      "ripple-tank": { "solids": 123, "fill": 0.69, "ink": 0.4, "cellMin": 0.53 },
-      "turning-dial": { "solids": 87, "fill": 0.71, "ink": 0.34, "cellMin": 0.22 }
+      "dial-indicator": {
+        "solids": 38,
+        "fill": 0.56,
+        "ink": 0.23,
+        "cellMin": 0.57
+      },
+      "desk-computer": {
+        "solids": 82,
+        "fill": 0.59,
+        "ink": 0.43,
+        "cellMin": 0.23
+      },
+      "test-rig": {
+        "solids": 53,
+        "fill": 0.61,
+        "ink": 0.33,
+        "cellMin": 0.36
+      },
+      "spot-plate": {
+        "solids": 45,
+        "fill": 0.49,
+        "ink": 0.35,
+        "cellMin": 0.59
+      },
+      "arcade-cabinet": {
+        "solids": 251,
+        "fill": 0.74,
+        "ink": 0.5,
+        "cellMin": 0.53
+      },
+      "raptor-engine": {
+        "solids": 298,
+        "fill": 0.62,
+        "ink": 0.39,
+        "cellMin": 0.46
+      },
+      "ripple-tank": {
+        "solids": 123,
+        "fill": 0.69,
+        "ink": 0.4,
+        "cellMin": 0.53
+      },
+      "turning-dial": {
+        "solids": 87,
+        "fill": 0.71,
+        "ink": 0.34,
+        "cellMin": 0.22
+      }
     },
     "statedCounts": "SKILL.md example list: desk-computer 'about 85 solids' (measured 82), arcade-cabinet 'a Hero of about 240 solids' (251), test-rig '53 solids' (53), turning-dial 'about 90 live parts' (87). verify.md: 'the Raptor has about 270' (298 drawn)."
   },
   "examples": {
-    "dial-indicator": { "tier": "figure", "why": "SKILL.md: 'the smallest'; one mechanism, SVG only" },
-    "desk-computer": { "tier": "figure", "why": "one mechanism, SVG only (step 1 Figure); about 85 solids" },
-    "test-rig": { "tier": "figure", "why": "one mechanism, SVG, 53 solids; 'the quality bar for the drawing itself'", "page": "React/Next example: render figure.tsx in a React app" },
-    "spot-plate": { "tier": "figure", "why": "one mechanism, SVG", "page": "React/Next example: render figure.tsx in a React app" },
-    "arcade-cabinet": { "tier": "hero", "why": "SKILL.md: 'a Hero of about 240 solids'" },
-    "raptor-engine": { "tier": "hero", "why": "verify.md: 'a hero subject ... the Raptor has about 270'" },
-    "ripple-tank": { "tier": "hero", "why": "two WebGL layers (step 1 Hero: 'several WebGL layers')" },
-    "turning-dial": { "tier": "hero", "why": "the 3D mode on one subject (step 1 Hero: 'one 3D subject')", "wait": 2500 }
+    "dial-indicator": {
+      "tier": "figure",
+      "why": "SKILL.md: 'the smallest'; one mechanism, SVG only"
+    },
+    "desk-computer": {
+      "tier": "figure",
+      "why": "one mechanism, SVG only (step 1 Figure); about 85 solids"
+    },
+    "test-rig": {
+      "tier": "figure",
+      "why": "one mechanism, SVG, 53 solids; 'the quality bar for the drawing itself'",
+      "page": "React/Next example: render figure.tsx in a React app"
+    },
+    "spot-plate": {
+      "tier": "figure",
+      "why": "one mechanism, SVG",
+      "page": "React/Next example: render figure.tsx in a React app"
+    },
+    "arcade-cabinet": {
+      "tier": "hero",
+      "why": "SKILL.md: 'a Hero of about 240 solids'",
+      "states": [
+        {
+          "name": "stick left",
+          "eval": "document.querySelector(\".iso-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowLeft\",bubbles:true}))",
+          "region": [
+            0.49,
+            0.4,
+            0.64,
+            0.58
+          ],
+          "wait": 500
+        }
+      ]
+    },
+    "raptor-engine": {
+      "tier": "hero",
+      "why": "verify.md: 'a hero subject ... the Raptor has about 270'"
+    },
+    "ripple-tank": {
+      "tier": "hero",
+      "why": "two WebGL layers (step 1 Hero: 'several WebGL layers')",
+      "states": [
+        {
+          "name": "frequency up",
+          "eval": "document.querySelector(\".rt-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}));document.querySelector(\".rt-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}));document.querySelector(\".rt-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}));document.querySelector(\".rt-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}))",
+          "region": [
+            0.21,
+            0.33,
+            0.81,
+            0.81
+          ],
+          "wait": 1200
+        }
+      ]
+    },
+    "turning-dial": {
+      "tier": "hero",
+      "why": "the 3D mode on one subject (step 1 Hero: 'one 3D subject')",
+      "wait": 2500,
+      "states": [
+        {
+          "name": "dial turned",
+          "eval": "document.querySelector(\".td-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}));document.querySelector(\".td-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}));document.querySelector(\".td-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}));document.querySelector(\".td-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}));document.querySelector(\".td-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"ArrowRight\",bubbles:true}))",
+          "region": [
+            0.3,
+            0.26,
+            0.7,
+            0.62
+          ],
+          "wait": 1500
+        }
+      ],
+      "rest": "document.querySelector(\".td-stage\").dispatchEvent(new KeyboardEvent(\"keydown\",{key:\"Home\",bubbles:true}))"
+    }
   }
 }

@@ -16,8 +16,15 @@
 //     "closest": "dial-indicator",                     // bundled example to compare against (an .mjs one)
 //     "preload": "window.__noTour = true;",            // optional: runs before the page (stop the tour)
 //     "rest": "window.__pose && window.__pose('rest')",// optional: JS that poses the figure for the measured still
-//     "states": [{ "name": "wrong key", "eval": "window.__lock(0, 0, true)" }, ...]
-//   }                                                  // every state the figure claims to show (round 3)
+//     "subject": "[data-name^=housing],[data-name=plug]",// CSS selector (inside the plate's svg) for the main mechanism:
+//                                                      // its box must cover a share of the card like the examples' objects
+//     "accent": { "selector": ".pt-wrong", "state": "wrong key" },  // the state marker and the state that shows it;
+//                                                      // checked for contrast in the -light page and its dark twin.
+//                                                      // No marker: "accent": { "none": "why" }
+//     "states": [{ "name": "wrong key", "eval": "window.__lock(0, 0, true)",
+//                  "changes": "[data-name^=keypin],[data-name=key]" }, ...]
+//   }                                                  // every state the figure claims to show (round 3), each with the
+//                                                      // parts that change in it: the change vs rest must land there
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -93,6 +100,27 @@ const DIFF = (a, b) => `(async()=>{const load=async(s)=>{const i=new Image();i.s
 
 const SIDE = (a, b, la, lb) => `(async()=>{const load=async(s)=>{const i=new Image();i.src="data:image/png;base64,"+s;await i.decode();return i};const A=await load("${a}"),B=await load("${b}");const pad=24,top=28;const c=document.createElement("canvas");c.width=A.width+B.width+pad*3;c.height=Math.max(A.height,B.height)+top+pad;const x=c.getContext("2d");x.fillStyle="#808080";x.fillRect(0,0,c.width,c.height);x.drawImage(A,pad,top);x.drawImage(B,A.width+pad*2,top);x.fillStyle="#fff";x.font="bold 14px monospace";x.fillText(${JSON.stringify(la)},pad,19);x.fillText(${JSON.stringify(lb)},A.width+pad*2,19);return c.toDataURL("image/png").split(",")[1]})()`;
 
+// Boxes of page elements, in the pixels of a shot of `root` (device scale 1). Hidden elements are skipped.
+const SHOWN = `const shown=(el)=>{for(let e=el;e&&e.nodeType===1;e=e.parentElement){const s=getComputedStyle(e);if(s.display==="none"||s.visibility==="hidden"||Number(s.opacity)===0)return false}return true};`;
+const RECT = (sel, root) => `(()=>{const r=document.querySelector(${JSON.stringify(root)});if(!r)return null;const R=r.getBoundingClientRect();${SHOWN}let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,n=0;for(const el of r.querySelectorAll(${JSON.stringify(sel)})){if(!shown(el))continue;const b=el.getBoundingClientRect();if(b.width<0.5&&b.height<0.5)continue;n++;x0=Math.min(x0,b.left);y0=Math.min(y0,b.top);x1=Math.max(x1,b.right);y1=Math.max(y1,b.bottom)}return {n,w:R.width,h:R.height,box:n?[x0-R.left,y0-R.top,x1-R.left,y1-R.top]:null}})()`;
+// A bundled example ships no subject declaration: its subject is every solid except the base it stands on, i.e. the
+// solids whose own box is under a quarter of the whole drawing's box (the bench plate and its skins are dropped).
+const AUTO_SUBJECT = `(()=>{const r=document.querySelector(".iso-plate svg");const R=r.getBoundingClientRect();${SHOWN}const bs=[...r.querySelectorAll("g.iso-solid")].filter(shown).map((e)=>e.getBoundingClientRect()).filter((b)=>b.width>0.5||b.height>0.5);if(!bs.length)return null;const U=(L)=>L.reduce((a,b)=>[Math.min(a[0],b.left),Math.min(a[1],b.top),Math.max(a[2],b.right),Math.max(a[3],b.bottom)],[1e9,1e9,-1e9,-1e9]);const all=U(bs);const A=(all[2]-all[0])*(all[3]-all[1]);const keep=bs.filter((b)=>b.width*b.height<0.25*A);const s=U(keep.length?keep:bs);return {n:keep.length,w:R.width,h:R.height,box:[s[0]-R.left,s[1]-R.top,s[2]-R.left,s[3]-R.top]}})()`;
+// Paint every visible fill and stroke under `sel` pure magenta (inline, restorable) so a second shot gives its exact pixels.
+const PAINT = (sel, on) => on
+  ? `(()=>{${SHOWN}const els=[];for(const g of document.querySelectorAll(${JSON.stringify(sel)}))for(const el of [g,...g.querySelectorAll("*")]){if(!(el instanceof SVGGraphicsElement)||!shown(el))continue;const s=getComputedStyle(el);el.dataset.gateStyle=el.getAttribute("style")??"\\u0000";if(s.fill&&s.fill!=="none")el.style.setProperty("fill","#ff00ff","important");if(s.stroke&&s.stroke!=="none")el.style.setProperty("stroke","#ff00ff","important");el.style.setProperty("opacity","1","important");els.push(el)}return els.length})()`
+  : `(()=>{for(const el of document.querySelectorAll("[data-gate-style]")){const v=el.dataset.gateStyle;if(v==="\\u0000")el.removeAttribute("style");else el.setAttribute("style",v);delete el.dataset.gateStyle}})()`;
+// Accent contrast: the marker's pixels (from the magenta shot) against the drawn pixels in a ring just outside it.
+// Returns the share of marker pixels whose luminance is at least T.accentStep away from the ring's median.
+const CONTRAST = (normal, magenta) => `(async()=>{const load=async(s)=>{const i=new Image();i.src="data:image/png;base64,"+s;await i.decode();const c=document.createElement("canvas");c.width=i.width;c.height=i.height;const x=c.getContext("2d");x.drawImage(i,0,0);return x.getImageData(0,0,i.width,i.height)};const A=await load("${normal}"),B=await load("${magenta}");const w=A.width,h=A.height;if(B.width!==w||B.height!==h)return null;const L=(d,i)=>0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];const m=new Uint8Array(w*h);let n=0;for(let i=0;i<w*h;i++){const r=B.data[i*4],g=B.data[i*4+1],b=B.data[i*4+2];if(r>200&&g<70&&b>200){m[i]=1;n++}}if(!n)return {n:0};const hist=new Map();for(const i of [0,w-1,(h-1)*w,h*w-1]){const v=Math.round(L(A.data,i));hist.set(v,(hist.get(v)||0)+1)}const paper=Math.round(L(A.data,2*w+2));const R=${T.accentRing};const ring=[];const dm=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(!m[y*w+x])continue;for(let dy=-R;dy<=R;dy+=2)for(let dx=-R;dx<=R;dx+=2){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=w||yy>=h)continue;const k=yy*w+xx;if(m[k]||dm[k])continue;dm[k]=1;const v=L(A.data,k);if(Math.abs(v-paper)>${T.paperDelta})ring.push(v)}}if(!ring.length)ring.push(paper);ring.sort((a,b)=>a-b);const med=ring[Math.floor(ring.length/2)];let far=0,sum=0;for(let i=0;i<w*h;i++)if(m[i]){const v=L(A.data,i);sum+=v;if(Math.abs(v-med)>=${T.accentStep})far++}return {n,share:far/n,mean:sum/n,ring:med}})()`;
+// State-local difference: changed pixels inside a box (state vs rest) over all changed pixels.
+const DIFFIN = (a, b, box, noise) => `(async()=>{const load=async(s)=>{const i=new Image();i.src="data:image/png;base64,"+s;await i.decode();const c=document.createElement("canvas");c.width=i.width;c.height=i.height;const x=c.getContext("2d");x.drawImage(i,0,0);return x.getImageData(0,0,i.width,i.height)};const A=await load("${a}"),B=await load("${b}"),N=${noise ? `await load("${noise}")` : "null"};if(A.width!==B.width||A.height!==B.height)return null;const D=(P,Q,k)=>Math.abs(P.data[k]-Q.data[k])+Math.abs(P.data[k+1]-Q.data[k+1])+Math.abs(P.data[k+2]-Q.data[k+2])>30;const nm=new Uint8Array(A.width*A.height);let noisy=0;if(N&&N.width===A.width&&N.height===A.height){const R=4;for(let y=0;y<A.height;y++)for(let x=0;x<A.width;x++)if(D(A,N,(y*A.width+x)*4)){noisy++;for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<A.width&&yy<A.height)nm[yy*A.width+xx]=1}}}const [x0,y0,x1,y1]=${JSON.stringify(box)};let ch=0,inside=0,bx=[1e9,1e9,-1,-1];for(let y=0;y<A.height;y++)for(let x=0;x<A.width;x++){const k=(y*A.width+x)*4;if(!nm[y*A.width+x]&&D(A,B,k)){ch++;bx=[Math.min(bx[0],x),Math.min(bx[1],y),Math.max(bx[2],x),Math.max(bx[3],y)];if(x>=x0&&x<=x1&&y>=y0&&y<=y1)inside++}}return {changed:ch,inside,noisy,total:A.width*A.height,bbox:[bx[0]/A.width,bx[1]/A.height,bx[2]/A.width,bx[3]/A.height].map((v)=>Math.round(v*100)/100)}})()`;
+const unionBox = (a, b) => !a ? b : !b ? a : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+const padBox = (b, d, w, h) => b && [Math.max(0, b[0] - d), Math.max(0, b[1] - d), Math.min(w, b[2] + d), Math.min(h, b[3] + d)];
+const boxArea = (b) => (b ? Math.max(0, b[2] - b[0]) * Math.max(0, b[3] - b[1]) : 0);
+// A region given as fractions of the card [x0, y0, x1, y1] (bundled examples have no selectors to name their parts by).
+const fracBox = (f, w, h) => f && [f[0] * w, f[1] * h, f[2] * w, f[3] * h];
+
 function specFor(page) {
   const dir = dirname(page), name = basename(page, ".html").replace(/-light$/, "");
   for (const p of [join(dir, `${name}.figure.json`), join(dir, "figure.json"), join(dir, name, "figure.json")]) if (existsSync(p)) return p;
@@ -109,19 +137,86 @@ async function measure(port, page, spec) {
   const still = await p.shot(".iso-plate svg");
   const card = await p.shot(".iso-plate");
   const pixels = still ? await p.evaluate(PIXELS(still)) : null;
-  return { p, count, still, card, pixels };
+  if (pixels) { const [x0, y0, x1, y1] = pixels.box; pixels.span = Math.max((x1 - x0) / pixels.w, (y1 - y0) / pixels.h); pixels.minor = Math.min((x1 - x0) / pixels.w, (y1 - y0) / pixels.h); }
+  const sr = await p.evaluate(spec?.subject ? RECT(spec.subject, ".iso-plate svg") : AUTO_SUBJECT);
+  const subject = sr?.box ? { n: sr.n, box: sr.box, share: boxArea(sr.box) / (sr.w * sr.h), auto: !spec?.subject } : { n: 0, share: 0, auto: !spec?.subject };
+  return { p, count, still, card, pixels, subject, subjectSel: spec?.subject };
 }
+
+// The accent / state marker in one theme: its pixels against the drawn ring around it, in the pose that shows it.
+async function accentIn(port, page, { selector, pose, preload, wait }) {
+  const p = await openPage(port, pathToFileURL(resolve(page)).href, { preload: preload ?? "" });
+  try {
+    await sleep(wait ?? 1300);
+    await p.evaluate(`(()=>{const s=document.createElement("style");s.textContent="[data-readout]{visibility:hidden!important}";document.head.appendChild(s)})()`);
+    if (pose) { await p.evaluate(pose); await sleep(900); }
+    const normal = await p.shot(".iso-plate svg");
+    const painted = await p.evaluate(PAINT(selector, true));
+    if (!painted) return { n: 0 };
+    const magenta = await p.shot(".iso-plate svg");
+    await p.evaluate(PAINT(selector, false));
+    return await p.evaluate(CONTRAST(normal, magenta));
+  } finally { p.close(); }
+}
+const darkOf = (page) => page.replace(/-light\.html$/, ".html");
 
 function judge(m, tier, report) {
   const floor = T.solidsFloor[tier];
   const s = m.count?.solids ?? 0;
   report(s >= floor, `drawn solids ${s} ≥ ${floor} (${tier} floor)`, `drawn solids ${s} < ${floor}, the ${tier} floor. Add real parts (SKILL.md workflow step 4 and "Every creation is highly detailed").`);
-  const f = m.pixels.fill;
-  report(f >= T.cardFill[0] && f <= T.cardFill[1], `card fill ${f.toFixed(2)} within ${T.cardFill.join("–")}`, `card fill ${f.toFixed(2)} outside ${T.cardFill.join("–")}: the drawing's box covers ${(f * 100).toFixed(0)}% of the drawing area (craft.md section 6: "about 55–65% of the card"; examples ${BASE.measured.range.fill.join("–")}). ${f > T.cardFill[1] ? "Too much of it is base or travel: tighten the plate to the mechanism, or fill it with real parts." : "The object is small in the card: fit with a smaller pad."}`);
+  // Card fill is measured per axis, so padding the card's height (or width) cannot move it: the drawing's box must span
+  // most of the card on its long axis and must not leave a band of empty card on the other one.
+  const { span, minor, fill: f } = m.pixels;
+  report(span >= T.span[0] && span <= T.span[1], `card span ${span.toFixed(2)} within ${T.span.join("–")} (drawing box on its long axis; area ${f.toFixed(2)}, for reference)`, `card span ${span.toFixed(2)} outside ${T.span.join("–")}: on its longer axis the drawing's box covers ${(span * 100).toFixed(0)}% of the card (examples ${BASE.measured.range.span.join("–")}). ${span > T.span[1] ? "It runs into the card edge: fit with a larger pad." : "The object is small in the card: fit with a smaller pad, or tighten the plate to the mechanism."}`);
+  report(minor >= T.minorMin, `card cross-span ${minor.toFixed(2)} ≥ ${T.minorMin}`, `card cross-span ${minor.toFixed(2)} < ${T.minorMin}: the drawing covers only ${(minor * 100).toFixed(0)}% of the card on its short axis, leaving an empty band (examples ${BASE.measured.range.minor.join("–")}). Shrink the card to the drawing or build the object out on that axis.`);
   const ink = m.pixels.ink;
   report(ink >= T.inkMin, `ink in its box ${ink.toFixed(2)} ≥ ${T.inkMin}`, `ink ${ink.toFixed(2)} < ${T.inkMin}: the drawing's box is mostly air (examples ${BASE.measured.range.ink.join("–")}).`);
+  const sj = m.subject;
+  if (!sj.auto || sj.share) report(sj.share >= T.subjectMin, `subject ${sj.auto ? "(whole object, auto) " : ""}covers ${sj.share.toFixed(2)} of the card ≥ ${T.subjectMin}`, sj.n ? `subject covers ${sj.share.toFixed(2)} of the card < ${T.subjectMin}: the mechanism the figure is about is too small to read (examples' whole object ${BASE.measured.range.subject.join("–")}). Make it the dominant thing in the card: draw it larger (a cutaway or training-scale model), move props off the plate, or crop the scene to it.` : `figure.json "subject" (${m.subjectSel}) matches nothing visible: name the main mechanism's elements (a CSS selector inside the plate's svg).`);
   const bare = m.pixels.cells.filter((c) => c.rel < T.cellMin);
   report(!bare.length, `no bare region (every 1/16 cell of the drawing has ≥ ${T.cellMin}× the median line density)`, `bare region${bare.length > 1 ? "s" : ""}: ${bare.map((c) => `cell col ${c.i + 1} row ${c.j + 1} at ${c.rel}× median line density`).join(", ")} (examples never fall below ${BASE.measured.range.cellMin[0]}×). Add the real parts that belong there.`);
+}
+
+// Capture each declared state (readout hidden) and check where its change lands: the pixels that differ from the rest
+// pose must fall mostly inside the box of the parts the state declares it changes ("changes": a CSS selector, measured in
+// both poses; bundled examples use "region": card fractions). Returns the stills for the pairwise check.
+async function runStates(p, spec, states, shots, report) {
+  const hide = `(()=>{let s=document.getElementById("gate-hide");if(!s){s=document.createElement("style");s.id="gate-hide";s.textContent="[data-readout]{visibility:hidden!important}";document.head.appendChild(s)}})()`;
+  await p.evaluate(hide);
+  const pose = async (code) => { if (code) await p.evaluate(code); };
+  await pose(spec.rest); await sleep(900);
+  const rest = await p.shot(".iso-plate");
+  // A second rest still: pixels that change while nothing is asked of the figure (a running screen, a plume, an idle
+  // animation) are masked out of every state's difference, so the check measures the state, not the background motion.
+  await sleep(900);
+  const rest2 = await p.shot(".iso-plate");
+  const out = [];
+  for (const st of states) {
+    let before = null;
+    if (st.changes) { await pose(spec.rest); await sleep(st.wait ?? 900); before = await p.evaluate(RECT(st.changes, ".iso-plate")); }
+    await pose(st.eval);
+    await sleep(st.wait ?? 900);
+    const b64 = await p.shot(".iso-plate");
+    const file = join(shots, `state-${String(st.name).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.png`);
+    writeFileSync(file, Buffer.from(b64, "base64"));
+    out.push({ name: st.name, b64, file });
+    if (!st.changes && !st.region) { report(false, "", `state "${st.name}" declares no "changes": a CSS selector for the parts that move or light up in it (round 1).`); continue; }
+    const after = st.changes ? await p.evaluate(RECT(st.changes, ".iso-plate")) : null;
+    const W = (after ?? before)?.w, H = (after ?? before)?.h;
+    let box = st.changes ? unionBox(before?.box, after?.box) : null;
+    const dims = await p.evaluate(`(()=>{const r=document.querySelector(".iso-plate").getBoundingClientRect();return [r.width,r.height]})()`);
+    if (st.region) box = fracBox(st.region, dims[0], dims[1]);
+    if (!box) { report(false, "", `state "${st.name}": "changes" (${st.changes}) matches nothing visible.`); continue; }
+    box = padBox(box, T.localPad, dims[0], dims[1]);
+    const area = boxArea(box) / (dims[0] * dims[1]);
+    const d = await p.evaluate(DIFFIN(rest, b64, box, rest2));
+    if (!d || !d.changed) { if (st.eval !== spec.rest) report(false, "", `state "${st.name}" looks identical to the rest pose with the readout hidden.`); continue; }
+    const share = d.inside / d.changed;
+    const ok = share >= T.localMin && area <= T.localMaxArea;
+    report(ok, `state "${st.name}": ${(share * 100).toFixed(0)}% of its change vs rest lies on the parts it declares (box ${(area * 100).toFixed(0)}% of the card)`, area > T.localMaxArea ? `state "${st.name}": the declared parts' box covers ${(area * 100).toFixed(0)}% of the card (max ${T.localMaxArea * 100}%), so it cannot show where the change is. Name only the parts that change.` : `state "${st.name}": only ${(share * 100).toFixed(0)}% of what changes vs rest lies on the parts it declares (needs ≥ ${T.localMin * 100}%). Either the declared parts are wrong or the state's difference is diffuse (a global tint, a moved camera, an animation running elsewhere).`);
+    if (st.eval !== spec.rest) out[out.length - 1].local = { share, area, bbox: d.bbox };
+  }
+  return out;
 }
 
 async function main() {
@@ -138,14 +233,19 @@ async function main() {
   const { port, close } = await browser();
   try {
     if (opt.examples) {
-      console.log("example          tier    solids  fill  ink   min cell");
+      console.log("example          tier    solids  fill  span  minor ink   min cell  subject  accent light/dark  local");
       for (const [name, e] of Object.entries(BASE.examples)) {
         const page = join(ANATOMY, "examples", name, `${name}-light.html`);
         if (!existsSync(page)) { console.log(`${name.padEnd(16)} not built (${e.page ?? "node build.mjs --light"})`); continue; }
         const m = await measure(port, page, { wait: e.wait });
         const min = Math.min(...m.pixels.cells.map((c) => c.rel));
-        console.log(`${name.padEnd(16)} ${e.tier.padEnd(7)} ${String(m.count.solids).padStart(6)}  ${m.pixels.fill.toFixed(2)}  ${m.pixels.ink.toFixed(2)}  ${min.toFixed(2)}${m.p.problems.length ? "  " + m.p.problems[0] : ""}`);
+        let local = "";
+        if (e.states) { const st = await runStates(m.p, { rest: e.rest }, e.states, mkdtempSync(join(tmpdir(), "gate-ex-")), () => {}); local = st.filter((x) => x.local).map((x) => `${x.name} ${x.local.share.toFixed(2)}@${x.local.area.toFixed(2)} diff[${x.local.bbox}]`).join(", "); }
         m.p.close();
+        const acc = [];
+        for (const pg of [page, darkOf(page)]) acc.push(existsSync(pg) ? await accentIn(port, pg, { selector: T.accentDefault, wait: e.wait }) : null);
+        const a = acc.map((r) => (r == null ? "  -  " : r.n ? r.share.toFixed(2) : "none")).join("/");
+        console.log(`${name.padEnd(16)} ${e.tier.padEnd(7)} ${String(m.count.solids).padStart(6)}  ${m.pixels.fill.toFixed(2)}  ${m.pixels.span.toFixed(2)}  ${m.pixels.minor.toFixed(2)}  ${m.pixels.ink.toFixed(2)}  ${min.toFixed(2)}      ${m.subject.share.toFixed(2)}     ${a}  ${local}${m.p.problems.length ? "  " + m.p.problems[0] : ""}`);
       }
       return;
     }
@@ -170,6 +270,7 @@ async function main() {
       const parts = Array.isArray(spec.parts) ? spec.parts.length : 0;
       const dup = Array.isArray(spec.parts) ? spec.parts.length - new Set(spec.parts.map((s) => String(s).trim().toLowerCase())).size : 0;
       report(parts >= T.partsMin[tier] && !dup, `parts list ${parts} ≥ ${T.partsMin[tier]}`, `parts list has ${parts} entries${dup ? ` (${dup} duplicated)` : ""}; a ${tier} needs ≥ ${T.partsMin[tier]} distinct parts (SKILL.md workflow steps 1 and 4).`);
+      report(typeof spec.subject === "string" && spec.subject.trim(), `subject declared (${spec.subject})`, `figure.json declares no "subject": a CSS selector for the main mechanism's elements in the plate's svg (round 1).`);
       if (spec.recorded != null) report(spec.recorded >= T.solidsFloor[tier], `recorder solids ${spec.recorded} ≥ ${T.solidsFloor[tier]}`, `recorder solids ${spec.recorded} < ${T.solidsFloor[tier]}, the ${tier} floor.`);
     }
     tier = tier ?? "figure";
@@ -177,6 +278,15 @@ async function main() {
     if (!m.count || !m.pixels) { report(false, "", "no .iso-plate with an svg in the page: build it with the kit's plateHtml."); }
     else judge(m, tier, report);
     writeFileSync(join(shots, "still.png"), Buffer.from(m.still ?? "", "base64"));
+    if (example) {
+      // A bundled example is held to the same state-local and accent checks where gate-baselines.json declares them.
+      const e = BASE.examples[example] ?? {};
+      if (e.states) await runStates(m.p, { rest: e.rest }, e.states, shots, report);
+      for (const pg of [...new Set([page, darkOf(page)])].filter(existsSync)) {
+        const r = await accentIn(port, pg, { selector: T.accentDefault, wait: e.wait });
+        if (r?.n) report(r.share >= T.accentMin, `lit accent stands off its neighbours in ${pg === page ? "light" : "dark"} theme (${(r.share * 100).toFixed(0)}%)`, `lit accent weak in ${pg === page ? "light" : "dark"} theme (${(r.share * 100).toFixed(0)}% < ${T.accentMin * 100}%)`);
+      }
+    }
 
     if (!example && spec) {
       // 2. Comparison: the figure next to the closest example, same device scale, card for card.
@@ -196,19 +306,11 @@ async function main() {
           ex.p.close();
         }
       }
-      // 3. States: each one captured with the readout hidden, for round 3. Identical stills fail outright.
+      // 3. States: each one captured with the readout hidden, for round 3. Identical stills fail outright, and each
+      // state's change must sit in the parts it declares ("changes"), not spread over the card.
       const states = Array.isArray(spec.states) ? spec.states : [];
       report(states.length > 0, `${states.length} declared state${states.length === 1 ? "" : "s"}`, `figure.json declares no states: list every state the figure claims to show (round 3).`);
-      const stills = [];
-      for (const st of states) {
-        await m.p.evaluate(`(()=>{let s=document.getElementById("gate-hide");if(!s){s=document.createElement("style");s.id="gate-hide";s.textContent="[data-readout]{visibility:hidden!important}";document.head.appendChild(s)}})()`);
-        if (st.eval) await m.p.evaluate(st.eval);
-        await sleep(st.wait ?? 900);
-        const b64 = await m.p.shot(".iso-plate");
-        const file = join(shots, `state-${String(st.name).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.png`);
-        writeFileSync(file, Buffer.from(b64, "base64"));
-        stills.push({ name: st.name, b64, file });
-      }
+      const stills = await runStates(m.p, spec, states, shots, report);
       let least = null;
       for (let i = 0; i < stills.length; i++) for (let j = i + 1; j < stills.length; j++) {
         const d = await m.p.evaluate(DIFF(stills[i].b64, stills[j].b64));
@@ -218,6 +320,22 @@ async function main() {
       }
       if (least) console.log(`note  least distinct pair: "${least.a}" / "${least.b}", ${least.pct.toFixed(2)}% of the card changes. Look at that pair first: if the difference only reads in the readout, round 3 fails.`);
       if (stills.length) console.log(`look  ${stills.map((s) => s.file).join("\n      ")}\n      (round 3: name what each still shows from the drawing alone; the gate cannot judge legibility)`);
+
+      // 4. Accent: the marker that carries the figure's state must stand off its neighbours in both themes.
+      const acc = spec.accent;
+      if (acc && acc.none) console.log(`note  no accent marker (${acc.none})`);
+      else if (!acc || !acc.selector) report(false, "", `figure.json declares no "accent": { "selector": CSS for the state marker (the lit or accent-coloured parts), "state": the state name that shows it }. A figure with no marker says so: "accent": { "none": "why" }.`);
+      else {
+        const st = states.find((x) => x.name === acc.state);
+        const pose = [spec.rest, st?.eval].filter(Boolean).join(";");
+        for (const pg of [...new Set([page, darkOf(page)])]) {
+          const theme = pg === page ? (/-light\.html$/.test(page) ? "light" : "page") : "dark";
+          if (pg !== page && !existsSync(pg)) { report(false, "", `no dark page next to ${basename(page)} (${basename(pg)}): build both themes so the accent can be checked in each.`); continue; }
+          const r = await accentIn(port, pg, { selector: acc.selector, pose, preload: spec.preload, wait: spec.wait });
+          if (!r?.n) { report(false, "", `accent "${acc.selector}" shows no pixels in ${theme} theme${acc.state ? ` in state "${acc.state}"` : ""}.`); continue; }
+          report(r.share >= T.accentMin, `accent stands off its neighbours in ${theme} theme: ${(r.share * 100).toFixed(0)}% of its pixels ≥ ${T.accentStep} luminance from the ring around it (≥ ${T.accentMin * 100}%)`, `accent is weak in ${theme} theme: only ${(r.share * 100).toFixed(0)}% of its pixels differ by ≥ ${T.accentStep} luminance from the parts around it (needs ≥ ${T.accentMin * 100}%; examples ${BASE.measured.range.accent.join("–")}). On light-toned parts the kit's lit style nearly vanishes (light theme: a white top on near-white parts; dark theme: the same on light greys). Use the high-contrast marker pattern in SKILL.md "Verification rounds".`);
+        }
+      }
     }
     for (const problem of m.p.problems) report(false, "", problem);
     m.p.close();
