@@ -41,9 +41,20 @@ skills/anatomy/examples/     8 example figures (sources; build to get HTML)
 
 **Cursor Marketplace:** once listed, open **Customize**, search for `anatomy-grok-bot`, and select **Install**.
 
-**Cursor, local test:** copy this folder to `~/.cursor/plugins/local/anatomy-grok-bot`, then run **Developer: Reload Window** and confirm the `anatomy` skill shows up under Customize.
+**Cursor, local test** (per [cursor.com/docs/plugins](https://cursor.com/docs/plugins), "Test plugins locally"):
 
-**Grok Bot:** install the plugin from this repository's URL (`https://github.com/plgonzalezrx8/anatomy-grok-bot`) through Grok Bot's plugin settings.
+1. Put a real copy of the plugin in `~/.cursor/plugins/local/anatomy-grok-bot` (Windows: `%USERPROFILE%\.cursor\plugins\local\anatomy-grok-bot`). The simplest way:
+   ```sh
+   mkdir -p ~/.cursor/plugins/local
+   git clone https://github.com/plgonzalezrx8/anatomy-grok-bot ~/.cursor/plugins/local/anatomy-grok-bot
+   ```
+   Don't symlink a checkout from elsewhere: Cursor skips symlinks in that folder whose target is outside it.
+2. Restart Cursor, or run **Developer: Reload Window**.
+3. Open **Customize** and check that the `anatomy` skill is listed. Invoke it with `/anatomy` in chat, or just ask for an isometric figure.
+
+On Teams/Enterprise, an admin must allow **Allow Local Plugin Imports** (Dashboard → Settings → Security & Identity → Marketplace and Plugins; off by default on Enterprise). If a marketplace plugin with the same name is installed, it takes precedence over the local copy.
+
+**Grok Bot:** no Grok Bot plugin-install flow has been verified yet. What is tested: clone this repository onto the agent's machine and point the agent at `skills/anatomy/SKILL.md`; the skill runs from there with Node 18+ and Chrome.
 
 ## Usage
 
