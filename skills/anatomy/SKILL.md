@@ -50,6 +50,17 @@ This copy of Anatomy ships inside the `anatomy-grok-bot` plugin (packaged by Ped
 - Inside a cavity seen from above, cut a window in the near wall so the mechanism faces the camera.
 - Measure the corner boxes after setting a long live readout and fall back to shorter text, rather than guessing a width breakpoint.
 
+## Verification rounds (mandatory, before any "done")
+
+Added by the plugin packaging after a figure passed every automated check while short of the size rules, with half its plate bare and its key state readable only in the readout. Nothing in this skill counts as finished until all four rounds pass in order. If any round fails, fix the figure and start again from that round.
+
+**A report is either DONE or NOT DONE.** A DONE report has no "known gaps", "weaknesses" or "next time" footnotes: every gap you found is fixed. If something truly can't be fixed (a missing fact, a kit limit, the user's time box), the report says **NOT DONE**, names each open item, why it can't be fixed and what fixing it would take.
+
+1. **Round 1, spec check, before any geometry.** Re-read workflow step 1 (sizes) and step 4 (parts list), then write `figure.json` next to the figure's build (format at the top of `scripts/gate.mjs`): `tier`, the full `parts` list (one entry per physical part; a set of identical fasteners is one entry), `closest` (the bundled example nearest in kind), and `states`, every state the figure claims to show, each with the `eval` that poses it. Count the list. It must reach the tier's minimum from step 4 before you write a line of geometry; if it doesn't, the object isn't rich enough yet, so add real parts, don't pad names.
+2. **Round 2, automated.** Every check in workflow step 10 (audit, line ends on both themes in every resting pose, a non-reduced `drive.mjs` session with a clean `console:` line) passes, and so does `node $ANATOMY/scripts/gate.mjs <page>-light.html`, which ends `gate passed`. The gate fails a figure whose parts list or recorder count is below the tier, whose drawn solids fall below the smallest bundled example of its tier (Figure 38, Hero 80), whose drawing box fills the card outside the examples' range, that is mostly air, or that has a bare region; it also writes the comparison image and the state stills used in rounds 3 and 4. Thresholds and their sources are in `scripts/gate-baselines.json`; don't loosen them for a figure.
+3. **Round 3, legibility.** Read every `state-*.png` the gate wrote (captured with the readout hidden). For each one, write down what the drawing alone shows, then check it against the state's name. Every state must be readable without the readout: a wrong pin must visibly sit off the shear line, a pressed key must visibly be down. The gate prints the least distinct pair of states; start there. If a state only reads in the readout, change the drawing (geometry, the lit accent, the pose, a closer camera), not the words.
+4. **Round 4, comparison.** Read `compare-<example>.png`: your card next to the closest example's at the same scale. List every way yours is weaker: part count and density, empty or plain regions, composition and size in the card, line and tone finish, how instantly the object reads. Fix every item on the list, then repeat rounds 2 to 4 until the list is empty.
+
 ## The one idea that matters
 
 **The object is the explanation.** Don't draw boxes, arrows and labels. Invent a real, well-made physical thing whose working *is* the concept. Here is how earlier figures mapped:
@@ -121,6 +132,7 @@ The kit is in `kit/`:
 | `scripts/capture.mjs` | Headless Chrome screenshots, close-ups and console checks, with WebGL on. Run with `node`. |
 | `scripts/drive.mjs` | Scripted headless Chrome with WebGL: move, click, key, slow motion, wait-until, eval, shots and contact sheets that catch pops; `--no-webgl` and `--preload`. |
 | `scripts/lines.mjs` | The line-end check on a built page, in headless Chrome: every texture line must end on a stroke, a dot or an outline. Rings the failures with `--out`; exits 1 on any. |
+| `scripts/gate.mjs`, `scripts/gate-baselines.json` | The verification-rounds gate (plugin addition): tier and parts list against the drawn solids, card fill, bare regions, the side-by-side comparison with the closest example and the state stills with the readout hidden; exits 1 on any FAIL. `--examples` re-measures the bundled examples. |
 | `scripts/inline-kit.mjs` | `kitScript()`, `glScript()` and `turnScript()` return the kit, the WebGL layer and the 3D runtime as source to inline into a standalone page. |
 | `scripts/turn-check.mjs`, `scripts/turn-bench.mjs` | 3D figures: fidelity against the kit builders, a z-buffer order check, pixel pops, line ends at 24 angles and frame timing in the browser; Node CPU time per part kind. |
 

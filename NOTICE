@@ -13,10 +13,14 @@ Packaged by:    Pedro Gonzalez / Blueforce Innovations
 
 Changes from upstream:
 - Laid out as a Cursor plugin: .cursor-plugin/plugin.json, skills/anatomy/.
-- skills/anatomy/SKILL.md is the upstream SKILL.md with one added section,
+- skills/anatomy/SKILL.md is the upstream SKILL.md with two added sections,
   "Running this skill from the plugin" (path resolution, requirements,
-  sanity check, and field-tested gotchas).
-- kit/, scripts/, references/ and examples/ sources are copied unchanged.
+  sanity check, and field-tested gotchas) and "Verification rounds", plus
+  one row for the gate in the Setup table. Upstream text is unchanged.
+- Added skills/anatomy/scripts/gate.mjs and gate-baselines.json (the
+  verification-rounds gate, by the packager).
+- All other kit/, scripts/, references/ and examples/ sources are copied
+  unchanged.
 - Prebuilt example HTML pages, evals/, .github/ and repository meta files
   were left out to keep the plugin small; every example rebuilds with
   `node examples/<name>/build.mjs`.

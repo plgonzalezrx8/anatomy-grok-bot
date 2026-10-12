@@ -4,7 +4,7 @@
 
 **Anatomy** was created by **Ryan ([@wheresryan22](https://x.com/wheresryan22))**.
 
-All of the figure-drawing design, the kit (`skills/anatomy/kit/`), the references (`skills/anatomy/references/`), the scripts, the examples and the skill rulebook (`skills/anatomy/SKILL.md`, apart from the added "Running this skill from the plugin" section) are his work.
+All of the figure-drawing design, the kit (`skills/anatomy/kit/`), the references (`skills/anatomy/references/`), the scripts (apart from the added `scripts/gate.mjs` and `scripts/gate-baselines.json`), the examples and the skill rulebook (`skills/anatomy/SKILL.md`, apart from the added "Running this skill from the plugin" and "Verification rounds" sections) are his work.
 
 - Original repository: <https://github.com/wheresryan22/anatomy>
 - Live demo: <https://skills.wheresryan.sh/anatomy>
